@@ -1,48 +1,65 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 
 interface Option {
   label: string;
-  value?: string;
-  options?: Option[];
+  value: string;
 }
 
-interface SelectProps {
+interface OptionGroup {
+  label: string;
   options: Option[];
-  value?: string;
-  onChange?: (value: string) => void;
+}
+
+interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'options'> {
+  options: (Option | OptionGroup)[];
   isOptionDisabled?: (option: Option) => boolean;
+  error?: string;
 }
 
-export function Select({ options, value, onChange, isOptionDisabled }: SelectProps) {
-  const renderOptions = (options: Option[]) => {
-    return options.map((option) => {
-      if (option.options) {
-        return (
-          <optgroup key={option.label} label={option.label}>
-            {renderOptions(option.options)}
-          </optgroup>
-        );
-      }
-      return (
-        <option 
-          key={option.value} 
-          value={option.value}
-          disabled={isOptionDisabled ? isOptionDisabled(option) : false}
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ options, isOptionDisabled, className = '', error, ...props }, ref) => {
+    return (
+      <div>
+        <select
+          ref={ref}
+          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            error ? 'border-red-500' : 'border-gray-300'
+          } ${className}`}
+          {...props}
         >
-          {option.label}
-        </option>
-      );
-    });
-  };
-
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange?.(e.target.value)}
-      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-    >
-      <option value="">Sélectionner</option>
-      {renderOptions(options)}
-    </select>
-  );
-}
+          <option value="">Sélectionner...</option>
+          {options.map((item, index) => {
+            if ('options' in item) {
+              return (
+                <optgroup key={index} label={item.label}>
+                  {item.options.map((option, optionIndex) => (
+                    <option
+                      key={`${index}-${optionIndex}`}
+                      value={option.value}
+                      disabled={isOptionDisabled?.(option)}
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            } else {
+              return (
+                <option
+                  key={index}
+                  value={item.value}
+                  disabled={isOptionDisabled?.(item)}
+                >
+                  {item.label}
+                </option>
+              );
+            }
+          })}
+        </select>
+        {error && (
+          <p className="mt-1 text-sm text-red-500">{error}</p>
+        )}
+      </div>
+    );
+  }
+);
